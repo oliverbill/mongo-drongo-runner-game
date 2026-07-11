@@ -40,6 +40,15 @@
   .bigmsg { font-size:clamp(26px,7vw,48px); font-weight:900; color:#7ee08a; text-shadow:0 3px 0 #1e6e30; }
   .bigmsg.bad { color:#ff6b6b; text-shadow:0 3px 0 #7a1616; }
   .stats { font-size:clamp(16px,4vw,22px); line-height:1.7; }
+  #gameControls { position:fixed; z-index:9; display:none; gap:10px;
+    top:calc(env(safe-area-inset-top,0px) + 10px);
+    right:calc(env(safe-area-inset-right,0px) + 10px); }
+  #gameControls.show { display:flex; }
+  .gctrl { width:50px; height:50px; border:none; border-radius:14px; font-size:24px; line-height:1;
+    color:#fff; background:rgba(12,18,40,.55); box-shadow:0 3px 0 rgba(0,0,0,.35); cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    -webkit-backdrop-filter:blur(4px); backdrop-filter:blur(4px); }
+  .gctrl:active { transform:translateY(2px); box-shadow:0 1px 0 rgba(0,0,0,.35); }
 </style>
 </head>
 <body>
@@ -313,6 +322,17 @@ function playNoise(dur, vol, when) {
   <button class="btn" id="btnAgain">JOGAR DE NOVO</button>
 </div>
 
+<div id="gameControls">
+  <button class="gctrl" id="btnPause" aria-label="Pausar" title="Pausar">⏸</button>
+  <button class="gctrl" id="btnHome" aria-label="Menu inicial" title="Menu inicial">🏠</button>
+</div>
+
+<div id="pauseOverlay" class="overlay hidden">
+  <div class="bigmsg" style="color:#ffe066;text-shadow:0 3px 0 #c47f17">⏸ PAUSA</div>
+  <button class="btn" id="btnResume">▶ CONTINUAR</button>
+  <button class="btn secondary" id="btnPauseMenu">🏠 MENU</button>
+</div>
+
 <script>
 "use strict";
 /* =====================================================================
@@ -407,7 +427,7 @@ resize();
 
 /* ---------- estado ---------- */
 const S = {
-  mode: "menu", phase: 0, speed: 0, dist: 0, distGoal: 0,
+  mode: "menu", paused: false, phase: 0, speed: 0, dist: 0, distGoal: 0,
   score: 0, coins: 0, coinsPhase: 0, lives: CFG.lives,
   t: 0, shake: 0, stink: 0, invuln: 0, msg: "", msgT: 0,
   player: null, boss: null,
@@ -422,7 +442,7 @@ function doSlide() { const p = S.player; if (!p) return; if (p.jy > 0) p.vy = -1
 function doLane(d) { const p = S.player; if (!p) return; p.lane = Math.max(-1, Math.min(1, p.lane + d)); }
 
 window.addEventListener("keydown", e => {
-  if (S.mode !== "run" && S.mode !== "boss") return;
+  if ((S.mode !== "run" && S.mode !== "boss") || S.paused) return;
   if (e.code === "ArrowLeft"  || e.code === "KeyA") { e.preventDefault(); doLane(-1); }
   if (e.code === "ArrowRight" || e.code === "KeyD") { e.preventDefault(); doLane(1); }
   if (e.code === "ArrowUp" || e.code === "Space" || e.code === "KeyW") { e.preventDefault(); doJump(); }
@@ -430,7 +450,7 @@ window.addEventListener("keydown", e => {
 });
 let touch = null;
 cv.addEventListener("touchstart", e => {
-  if (S.mode !== "run" && S.mode !== "boss") return;
+  if ((S.mode !== "run" && S.mode !== "boss") || S.paused) return;
   e.preventDefault();
   touch = { x: e.touches[0].clientX, y: e.touches[0].clientY, done: false };
 }, { passive: false });
@@ -448,7 +468,7 @@ cv.addEventListener("touchend", () => {
   touch = null;
 });
 cv.addEventListener("mousedown", e => {
-  if (S.mode !== "run" && S.mode !== "boss") return;
+  if ((S.mode !== "run" && S.mode !== "boss") || S.paused) return;
   const third = e.clientX / W;
   if (third < 0.33) doLane(-1); else if (third > 0.66) doLane(1); else doJump();
 });
@@ -535,7 +555,7 @@ function bossDefeated() {
     "Pontos: <b>" + S.score + "</b> &nbsp; Moedas: <b>" + S.coins + "</b> &nbsp; Vidas: <b>" + S.lives + "</b>";
   show("phaseClear");
 }
-const overlays = ["menu","phaseClear","gameOver","victory"];
+const overlays = ["menu","phaseClear","gameOver","victory","pauseOverlay"];
 function show(id) { overlays.forEach(o => document.getElementById(o).classList.toggle("hidden", o !== id)); if (id === "menu") refreshMenu(); }
 function hideAll() { overlays.forEach(o => document.getElementById(o).classList.add("hidden")); }
 
@@ -2135,12 +2155,54 @@ let last = performance.now();
 function loop(now) {
   const dt = Math.min((now - last) / 1000, 0.033);
   last = now;
-  if (S.mode === "run" || S.mode === "boss") update(dt);
+  if ((S.mode === "run" || S.mode === "boss") && !S.paused) update(dt);
   if (S.mode !== "menu") draw();
   else { drawSky(); drawGroundRoad(); }
+  updateGameControls();
   requestAnimationFrame(loop);
 }
 requestAnimationFrame(loop);
+
+/* ---------- pausa e menu durante o jogo ---------- */
+function isPlaying() { return S.mode === "run" || S.mode === "boss"; }
+function updateGameControls() {
+  document.getElementById("gameControls").classList.toggle("show", isPlaying() && !S.paused);
+}
+function pauseGame() {
+  if (!isPlaying() || S.paused) return;
+  S.paused = true;
+  stopMusic();
+  document.getElementById("pauseOverlay").classList.remove("hidden");
+  updateGameControls();
+}
+function resumeGame() {
+  if (!S.paused) return;
+  S.paused = false;
+  document.getElementById("pauseOverlay").classList.add("hidden");
+  last = performance.now();          // evita um salto grande de dt após a pausa
+  if (SND.on) startMusic(S.phase);   // retoma a trilha da fase
+  updateGameControls();
+}
+function exitToMenu() {
+  S.paused = false;
+  S.mode = "menu";
+  stopMusic();
+  document.getElementById("pauseOverlay").classList.add("hidden");
+  show("menu");
+  updateGameControls();
+}
+document.getElementById("btnPause").onclick = pauseGame;
+document.getElementById("btnHome").onclick = exitToMenu;
+document.getElementById("btnResume").onclick = resumeGame;
+document.getElementById("btnPauseMenu").onclick = exitToMenu;
+// atalhos de teclado: P ou Esc para pausar / retomar
+window.addEventListener("keydown", function(e) {
+  if (e.code === "KeyP" || e.code === "Escape") {
+    e.preventDefault();
+    if (S.paused) resumeGame();
+    else if (isPlaying()) pauseGame();
+  }
+});
 
 // aplicar definições guardadas ao arrancar
 SND.on = SAVE.data.sound !== false;
