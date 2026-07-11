@@ -1,0 +1,12 @@
+{
+  "name": "mongodringo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Mongo e Drongo — Corrida Maluca (jogo HTML) + testes de regressão",
+  "scripts": {
+    "test": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.49.0"
+  }
+}

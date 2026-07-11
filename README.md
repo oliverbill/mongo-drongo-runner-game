@@ -10,6 +10,31 @@ Jogo HTML autocontido (todos os recursos embutidos em base64, sem dependências 
 - `icon.png` — ícone 180×180 (usado no manifest e como `apple-touch-icon`)
 - `manifest.webmanifest` — manifesto PWA (Android / navegadores compatíveis)
 - `.github/workflows/deploy.yml` — deploy automático para o GitHub Pages
+- `.github/workflows/tests.yml` — testes de regressão (CI)
+- `tests/game.spec.js` — testes de regressão (Playwright)
+
+## Testes de regressão
+
+Testes end-to-end (Playwright) que abrem o jogo num navegador headless e verificam:
+
+- smoke: carrega no menu sem erros de JS;
+- vida infinita sempre habilitada (liga/desliga sem mortes);
+- controles de jogo (pause/menu) aparecem só durante a partida;
+- pause congela a simulação e mostra a tela de pausa;
+- continuar retoma a partida;
+- botão menu volta à tela inicial;
+- atalhos de teclado P (pausa) e Esc (retoma);
+- entrada de jogo ignorada enquanto pausado.
+
+Rodar localmente:
+
+```bash
+npm install
+npx playwright install chromium   # baixa o navegador do Playwright
+npm test
+```
+
+Rodam automaticamente no CI a cada push na `main` e em cada pull request.
 
 ## Publicação (GitHub Pages)
 
