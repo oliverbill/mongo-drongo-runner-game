@@ -573,16 +573,10 @@ function refreshMenu() {
   document.querySelectorAll(".diffBtn").forEach(function(b) {
     b.style.outline = (b.dataset.diff === SAVE.data.difficulty) ? "3px solid #7ee08a" : "none";
   });
-  // vida infinita: bloqueada até 5 mortes; depois vira toggle normal
+  // vida infinita: sempre disponível como toggle ON/OFF
   var bi = document.getElementById("btnInfinite");
-  var deaths = SAVE.data.deaths || 0;
-  if (deaths >= 5) {
-    bi.style.opacity = "1";
-    bi.textContent = "❤️ Vida ∞: " + (SAVE.data.infinite ? "ON" : "OFF");
-  } else {
-    bi.style.opacity = "0.55";
-    bi.textContent = "🔒 Vida ∞ (" + deaths + "/5 mortes)";
-  }
+  bi.style.opacity = "1";
+  bi.textContent = "❤️ Vida ∞: " + (SAVE.data.infinite ? "ON" : "OFF");
   document.getElementById("btnSound").textContent = SND.on ? "🔊 Som: LIGADO" : "🔇 Som: DESLIGADO";
 }
 
@@ -609,7 +603,6 @@ document.querySelectorAll(".diffBtn").forEach(function(b) {
 });
 // alternar vida infinita (só depois de desbloqueada às 5 mortes)
 document.getElementById("btnInfinite").onclick = () => {
-  if ((SAVE.data.deaths || 0) < 5) return;   // ainda bloqueada
   SAVE.data.infinite = !SAVE.data.infinite;
   SAVE.save(); refreshMenu();
 };
