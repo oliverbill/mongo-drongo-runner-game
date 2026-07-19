@@ -1,5 +1,5 @@
 {
-  "name": "mongodringo",
+  "name": "mongo-drongo-runner-game",
   "version": "1.0.0",
   "private": true,
   "description": "Mongo e Drongo — Corrida Maluca (jogo HTML) + testes de regressão",

@@ -2,7 +2,7 @@
 
 Jogo HTML autocontido (todos os recursos embutidos em base64, sem dependências externas), hospedado no **GitHub Pages**.
 
-🎮 **Jogar:** https://oliverbill.github.io/MongoDringo/
+🎮 **Jogar:** https://oliverbill.github.io/mongo-drongo-runner-game/
 
 ## Arquivos
 
