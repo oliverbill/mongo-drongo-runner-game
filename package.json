@@ -4,7 +4,8 @@
   "private": true,
   "description": "Mongo e Drongo — Corrida Maluca (jogo HTML) + testes de regressão",
   "scripts": {
-    "test": "playwright test"
+    "test": "playwright test",
+    "download-audio": "bash scripts/download-audio.sh"
   },
   "devDependencies": {
     "@playwright/test": "^1.49.0"
