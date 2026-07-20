@@ -1,6 +1,6 @@
 {
   "name": "Mongo e Drongo — Corrida Maluca",
-  "short_name": "Mongo e Drongo Novo",
+  "short_name": "Mongo Drongo Runner",
   "description": "Jogo Mongo e Drongo — Corrida Maluca",
   "start_url": "./index.html",
   "scope": "./",
