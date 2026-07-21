@@ -107,6 +107,10 @@ function unlockAudio() {
     var s = SND.ctx.createBufferSource();
     s.buffer = b; s.connect(SND.ctx.destination); s.start(0);
   } catch (e) {}
+  // se estávamos a tentar tocar a mp3 e o browser bloqueou, tenta agora (estamos dentro da gesture)
+  if (typeof MP3 !== "undefined" && MP3.wantPlay && MP3.el && MP3.el.paused) {
+    tryPlayMp3();
+  }
 }
 window.addEventListener("touchstart", unlockAudio, { once: false });
 window.addEventListener("touchend", unlockAudio, { once: false });
@@ -211,8 +215,70 @@ var MAIN_THEME = {
 };
 var USE_CONTINUOUS = true;   // usar o tema único contínuo em vez de uma trilha por fase
 
+/* Faixas mp3 por fase */
+var PHASE_TRACKS = {
+  0: "phase1-funk-cacador.mp3",
+  1: "phase2-rap-escolinha.mp3",
+  2: "phase3-rap-pets.mp3",
+  3: "phase4-rap-zongo.mp3",
+  4: "phase-fnf-batalha-rap-round1.mp3",
+  5: "phase-fnf-batalha-rap-round2.mp3",
+  6: "phase-fnf-skid-pump-round1.mp3",
+  7: "phase-fnf-skid-pump-round2.mp3"
+};
+var MP3 = { el: null, phase: -1, wantPlay: false };
+function ensureMp3El() {
+  if (!MP3.el) {
+    MP3.el = new Audio();
+    MP3.el.loop = true;
+    MP3.el.volume = 0.55;
+    MP3.el.preload = "auto";
+    MP3.el.addEventListener("error", function () {
+      console.warn("[mp3] error", MP3.el.error && MP3.el.error.code, MP3.el.src);
+    });
+  }
+  return MP3.el;
+}
+function tryPlayMp3() {
+  if (!MP3.wantPlay || !MP3.el) return;
+  var p = MP3.el.play();
+  if (p && typeof p.then === "function") {
+    p.catch(function (err) {
+      console.warn("[mp3] play blocked:", err && err.name, "— re-armado; tentará no próximo clique/tecla.");
+    });
+  }
+}
+function playPhaseMp3(phaseIdx) {
+  var src = PHASE_TRACKS[phaseIdx];
+  if (!src) { stopPhaseMp3(); return false; }
+  ensureMp3El();
+  if (MP3.phase !== phaseIdx || !MP3.el.src.endsWith(src)) {
+    MP3.el.src = src;
+    MP3.phase = phaseIdx;
+  }
+  MP3.wantPlay = true;
+  tryPlayMp3();
+  return true;
+}
+function stopPhaseMp3() {
+  MP3.wantPlay = false;
+  if (MP3.el) {
+    try { MP3.el.pause(); MP3.el.currentTime = 0; } catch (e) {}
+  }
+  MP3.phase = -1;
+}
+
 function startMusic(phaseIdx) {
-  if (!MUS.on || !SND.ctx) return;
+  if (!MUS.on) return;
+  // Se a fase tem uma faixa mp3, toca-a e para o tema sintetizado
+  if (PHASE_TRACKS[phaseIdx]) {
+    if (MUS.timer) { clearTimeout(MUS.timer); MUS.timer = null; }
+    playPhaseMp3(phaseIdx);
+    return;
+  }
+  // caso contrário, volta ao tema sintetizado
+  stopPhaseMp3();
+  if (!SND.ctx) return;
   if (!MUS.master) {
     MUS.master = SND.ctx.createGain();
     MUS.master.gain.value = 0.16;   // volume da música (baixo, para não abafar as vozes)
@@ -224,7 +290,7 @@ function startMusic(phaseIdx) {
     MUS.track = MAIN_THEME;
     MUS.step = 0;
   } else {
-    stopMusic();
+    if (MUS.timer) { clearTimeout(MUS.timer); MUS.timer = null; }
     MUS.track = TRACKS[phaseIdx] || TRACKS[0];
     MUS.step = 0;
   }
@@ -245,6 +311,7 @@ function startMusic(phaseIdx) {
 }
 function stopMusic() {
   if (MUS.timer) { clearTimeout(MUS.timer); MUS.timer = null; }
+  stopPhaseMp3();
 }
 function playNote(freq, dur, wave, vol, when) {
   if (!freq || !SND.ctx) return;
